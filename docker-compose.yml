@@ -1,0 +1,101 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - lab-net
+
+  # 初回起動時にモデルをpullするヘルパー
+  ollama-setup:
+    image: curlimages/curl:latest
+    depends_on:
+      ollama:
+        condition: service_started
+    networks:
+      - lab-net
+    # Ollamaの起動を待ってからモデルをpull
+    entrypoint: >
+      sh -c "
+        echo 'Waiting for Ollama to start...' &&
+        until curl -s http://ollama:11434/api/tags > /dev/null 2>&1; do
+          sleep 2
+        done &&
+        echo 'Pulling model...' &&
+        curl -s http://ollama:11434/api/pull -d '{\"name\": \"llama3.2:3b\"}' &&
+        echo 'Model ready!'
+      "
+
+  # Case 1: プロンプトインジェクション（中古車ディーラーbot）
+  case1-prompt-injection:
+    image: llm-security-lab/case1-prompt-injection
+    build: ./hands-on/case1_prompt_injection
+    container_name: case1-prompt-injection
+    ports:
+      - "10001:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_TIMEOUT=${OLLAMA_TIMEOUT:-120}
+    depends_on:
+      ollama:
+        condition: service_started
+    networks:
+      - lab-net
+
+  # Case 2: 間接プロンプトインジェクション（Web要約bot）
+  case2-indirect-injection:
+    image: llm-security-lab/case2-indirect-injection
+    build: ./hands-on/case2_indirect_injection
+    container_name: case2-indirect-injection
+    ports:
+      - "10002:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_TIMEOUT=${OLLAMA_TIMEOUT:-120}
+    depends_on:
+      ollama:
+        condition: service_started
+    networks:
+      - lab-net
+
+  # Case 3: 安全でない出力処理（AI計算アシスタント / RCE via eval）
+  case3-insecure-output:
+    image: llm-security-lab/case3-insecure-output
+    build: ./hands-on/case3_insecure_output
+    container_name: case3-insecure-output
+    ports:
+      - "10003:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_TIMEOUT=${OLLAMA_TIMEOUT:-120}
+    depends_on:
+      ollama:
+        condition: service_started
+    networks:
+      - lab-net
+
+  # Case 4: 訓練データ汚染（たけのこの里 推しbot）
+  case4-training-poisoning:
+    image: llm-security-lab/case4-training-poisoning
+    build: ./hands-on/case4_training_poisoning
+    container_name: case4-training-poisoning
+    ports:
+      - "10004:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_TIMEOUT=${OLLAMA_TIMEOUT:-120}
+    depends_on:
+      ollama:
+        condition: service_started
+    networks:
+      - lab-net
+
+networks:
+  lab-net:
+    driver: bridge
+
+volumes:
+  ollama_data:
