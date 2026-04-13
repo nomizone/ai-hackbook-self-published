@@ -6,7 +6,7 @@
 以下のURLまたは同人誌即売会の会場にて頒布しています。
 
 - 技術書典:https://techbookfest.org/product/A8LWqj75NYx6Wzsd6GJUJ
-- BOOTH:<準備中>
+- BOOTH:https://nomizone.booth.pm/items/8195970
 - メロンブックス:<準備中>
 
 ## 利用上の注意
